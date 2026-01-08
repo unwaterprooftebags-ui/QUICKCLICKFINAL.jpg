@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QuickClick</title>
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.screen {
+    background: #ffffff;
+    padding: 40px 30px;
+    border-radius: 16px;
+    width: 600px;
+    text-align: center;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    transition: opacity 0.5s ease;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#gameScreen {
+    display: none;
+    position: relative;
+}
+
+#gameArea {
+    width: 500px;
+    height: 300px;
+    margin: 20px auto;
+    border-radius: 12px;
+    border: 2px solid #ccc;
+    background: #fafafa;
+    position: relative;
+    overflow: hidden;
+}
+
+.target {
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.decoy {
+    /* Changed from #457b9d to more vibrant blue */
+    background: #00aaff;
+}
+
+.decoy.boss {
+    animation: shake 0.2s infinite;
+}
+
+@keyframes shake {
+    0% { transform: translate(0,0); }
+    25% { transform: translate(2px,2px); }
+    50% { transform: translate(-2px,2px); }
+    75% { transform: translate(2px,-2px); }
+    100% { transform: translate(-2px,-2px); }
+}
+
+#box {
+    /* Changed from #e63946 to more vibrant red */
+    background: #ff2a2a;
+}
+
+button {
+    font-size: 18px;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #1d3557;
+    color: white;
+}
+
+.info {
+    font-size: 20px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-around;
+    font-weight: bold;
+}
+
+#stars {
+    margin-top: 10px;
+    font-size: 24px;
+    color: gold;
+}
+
+#bossWarning {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    color: red;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 60px;
+    font-weight: bold;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+    text-align: center;
+    flex-direction: column;
+}
+</style>
+</head>
+
+<body>
+
+<div class="screen" id="startScreen">
+    <h1>QuickClick</h1>
+    <p id="startText">
+        Click the <b style="color:#ff2a2a">red</b> box.<br>
+        Avoid the <b style="color:#00aaff">blue</b> distractions.<br>
+        Every 50 points = 1 star.
+    </p>
+    <p>High Score: <span id="highScore">0</span></p>
+    <p>Stars: <span id="stars">☆☆☆☆☆</span></p>
+    <button id="startBtn">Start Game</button>
+</div>
+
+<div class="screen" id="levelScreen" style="display:none;">
+    <h2 id="nextLevelTitle">Next Level</h2>
+    <p id="levelMessage">Catch your breath!</p>
+    <button id="nextLevelBtn">I'm Ready</button>
+</div>
+
+<div class="screen" id="gameScreen">
+    <h2 id="levelTitle">Level 1</h2>
+
+    <div id="gameArea">
+        <div id="box" class="target"></div>
+    </div>
+
+    <div class="info">
+        <span>Score: <span id="score">0</span></span>
+        <span>Time: <span id="time">30</span></span>
+    </div>
+</div>
+
+<div class="screen" id="endGameScreen" style="display:none;">
+    <h1>🏆 You Beat QuickClick! 🏆</h1>
+    <p style="font-size:22px;">
+        You collected all 5 stars and conquered the game!
+    </p>
+    <button id="restartGameBtn">Restart QuickClick</button>
+</div>
+
+<div id="bossWarning">
+    BOSS LEVEL<br>
+    <span style="font-size:24px;">⚠ FLASHING LIGHTS WARNING ⚠</span>
+</div>
+
+<script>
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endGameScreen = document.getElementById("endGameScreen");
+const levelScreen = document.getElementById("levelScreen");
+const nextLevelTitle = document.getElementById("nextLevelTitle");
+const nextLevelBtn = document.getElementById("nextLevelBtn");
+const levelMessage = document.getElementById("levelMessage");
+
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartGameBtn");
+const gameArea = document.getElementById("gameArea");
+const box = document.getElementById("box");
+const scoreEl = document.getElementById("score");
+const timeEl = document.getElementById("time");
+const levelTitle = document.getElementById("levelTitle");
+const starsEl = document.getElementById("stars");
+const highScoreEl = document.getElementById("highScore");
+const bossWarning = document.getElementById("bossWarning");
+
+const levels = [
+    { time: 30, decoys: 3, speed: 1000 },
+    { time: 25, decoys: 5, speed: 900 },
+    { time: 20, decoys: 6, speed: 700 },
+    { time: 15, decoys: 8, speed: 500, boss: true }
+];
+
+let level = 0;
+let score = 0;
+let stars = Number(localStorage.getItem("stars")) || 0;
+let cumulative = Number(localStorage.getItem("cumulative")) || 0;
+let highScore = Number(localStorage.getItem("highScore")) || 0;
+let timer, mover, flasher, decoys = [];
+
+highScoreEl.textContent = highScore;
+updateStars();
+
+function updateStars(){
+    starsEl.textContent = "⭐".repeat(stars) + "☆".repeat(5 - stars);
+}
+
+function randomPos(el){
+    el.style.left = Math.random() * (gameArea.clientWidth - 50) + "px";
+    el.style.top = Math.random() * (gameArea.clientHeight - 50) + "px";
+}
+
+function createDecoys(n, boss){
+    for(let i=0;i<n;i++){
+        const d = document.createElement("div");
+        d.className = "target decoy" + (boss ? " boss" : "");
+        d.onclick = () => {
+            score = Math.max(0, score - (boss ? 5 : 1));
+            scoreEl.textContent = score;
+            randomPos(d);
+        };
+        gameArea.appendChild(d);
+        randomPos(d);
+        decoys.push(d);
+    }
+}
+
+function bossWarningScreen(cb){
+    bossWarning.style.opacity = 1;
+    setTimeout(()=>{
+        bossWarning.style.opacity = 0;
+        setTimeout(cb, 500);
+    }, 3500);
+}
+
+function startLevel(){
+    const cfg = levels[level];
+    if(cfg.boss){
+        bossWarningScreen(()=>begin(cfg));
+    } else begin(cfg);
+}
+
+function begin(cfg){
+    levelTitle.textContent = cfg.boss ? "BOSS LEVEL" : "Level " + (level + 1);
+    let time = cfg.time;
+    timeEl.textContent = time;
+
+    decoys.forEach(d=>d.remove());
+    decoys = [];
+    createDecoys(cfg.decoys, cfg.boss);
+    randomPos(box);
+
+    if(cfg.boss){
+        flasher = setInterval(()=>{
+            const red = gameArea.style.background === "red";
+            gameArea.style.background = red ? "#fafafa" : "red";
+            // Updated vibrant red here
+            box.style.background = red ? "#ff2a2a" : "#000";
+        },200);
+    }
+
+    mover = setInterval(()=>{
+        randomPos(box);
+        decoys.forEach(randomPos);
+    }, cfg.speed);
+
+    timer = setInterval(()=>{
+        time--;
+        timeEl.textContent = time;
+        if(time<=0){
+            clearInterval(timer);
+            clearInterval(mover);
+            clearInterval(flasher);
+            gameArea.style.background="#fafafa";
+            // Updated vibrant red here
+            box.style.background="#ff2a2a";
+            nextLevel();
+        }
+    },1000);
+}
+
+function nextLevel(){
+    level++;
+    if(level >= levels.length){
+        endGame();
+    } else {
+        showLevelInterval();
+    }
+}
+
+function showLevelInterval(){
+    gameScreen.style.display = "none";
+    levelScreen.style.display = "block";
+    const isBoss = levels[level].boss;
+    
+    nextLevelTitle.textContent = isBoss ? "BOSS LEVEL" : "Level " + (level + 1);
+
+    let msg = "Get ready!";
+    if(level === 1) msg = "Great job! Speeding up...";
+    else if(level === 2) msg = "Stay focused! It's getting crowded.";
+    else if(level === 3) msg = "BEWARE: THE BOSS APPROACHES!";
+    
+    levelMessage.textContent = msg;
+}
+
+function endGame(){
+    cumulative += score;
+    while(cumulative >= 50 && stars < 5){
+        cumulative -= 50;
+        stars++;
+    }
+
+    localStorage.setItem("stars", stars);
+    localStorage.setItem("cumulative", cumulative);
+
+    if(score > highScore){
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+    }
+
+    updateStars();
+    highScoreEl.textContent = highScore;
+
+    gameScreen.style.display="none";
+
+    if(stars >= 5){
+        endGameScreen.style.display="block";
+    } else {
+        startScreen.style.display="block";
+    }
+
+    score = 0;
+    level = 0;
+}
+
+box.onclick = () => {
+    score++;
+    scoreEl.textContent = score;
+    randomPos(box);
+};
+
+startBtn.onclick = () => {
+    startScreen.style.display="none";
+    gameScreen.style.display="block";
+    startLevel();
+};
+
+nextLevelBtn.onclick = () => {
+    levelScreen.style.display="none";
+    gameScreen.style.display="block";
+    startLevel();
+};
+
+restartBtn.onclick = () => {
+    stars = 0;
+    cumulative = 0;
+    localStorage.clear();
+    updateStars();
+    endGameScreen.style.display="none"; 
+    startScreen.style.display="block";
+};
+</script>
+
+</body>
+</html> 
