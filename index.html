@@ -22,12 +22,10 @@ body {
     width: 600px;
     text-align: center;
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-    transition: opacity 0.5s ease;
 }
 
-#gameScreen {
+#gameScreen, #levelScreen, #endGameScreen {
     display: none;
-    position: relative;
 }
 
 #gameArea {
@@ -41,6 +39,71 @@ body {
     overflow: hidden;
 }
 
+/* BOSS EFFECTS */
+.boss-bg-flash { animation: bossFlash 0.15s infinite; }
+@keyframes bossFlash {
+    0% { background-color: #000; }
+    50% { background-color: #fff; }
+    100% { background-color: #000; }
+}
+
+.boss-circle {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: red;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+    animation: pulse 0.6s forwards;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* GOD MODE EFFECTS */
+#heavenlyLight {
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 500px;
+    background: linear-gradient(to bottom, rgba(255, 255, 150, 0.4), transparent);
+    pointer-events: none;
+    z-index: 1;
+    display: none;
+    filter: blur(20px);
+}
+
+.halo {
+    position: absolute;
+    border-radius: 50%;
+    border: 4px solid gold;
+    box-shadow: 0 0 20px gold;
+    pointer-events: none;
+    display: none;
+    z-index: 9;
+    animation: rotateHalo 4s linear infinite;
+}
+
+@keyframes rotateHalo {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* DRUNK MODE */
+@keyframes insaneDrunk {
+    0% { transform: rotate(0deg) scale(1) skew(0deg); filter: hue-rotate(0deg); }
+    25% { transform: rotate(10deg) scale(1.2) skew(5deg); filter: hue-rotate(90deg); }
+    50% { transform: rotate(-10deg) scale(0.8) skew(-5deg); filter: hue-rotate(180deg); }
+    75% { transform: rotate(5deg) scale(1.1) skew(2deg); filter: hue-rotate(270deg); }
+    100% { transform: rotate(0deg) scale(1) skew(0deg); filter: hue-rotate(360deg); }
+}
+.drunk-active { animation: insaneDrunk 2s infinite linear; }
+
 .target {
     width: 50px;
     height: 50px;
@@ -49,13 +112,8 @@ body {
     border-radius: 8px;
 }
 
-.decoy {
-    background: #00aaff;
-}
-
-.decoy.boss {
-    animation: shake 0.2s infinite;
-}
+.decoy { background: #00aaff; }
+.decoy.boss { animation: shake 0.2s infinite; }
 
 @keyframes shake {
     0% { transform: translate(0,0); }
@@ -65,10 +123,7 @@ body {
     100% { transform: translate(-2px,-2px); }
 }
 
-#box {
-    background: #ff2a2a;
-    z-index: 10;
-}
+#box { background: #ff2a2a; z-index: 10; }
 
 button {
     font-size: 18px;
@@ -78,11 +133,6 @@ button {
     cursor: pointer;
     background: #1d3557;
     color: white;
-    transition: transform 0.1s;
-}
-
-button:active {
-    transform: scale(0.95);
 }
 
 .info {
@@ -93,55 +143,94 @@ button:active {
     font-weight: bold;
 }
 
-#stars {
-    margin-top: 10px;
-    font-size: 24px;
-    color: gold;
-}
+#starsDisplay { margin-top: 10px; font-size: 24px; color: gold; }
 
-#bossWarning {
+/* GORILLA TAKEDOWN */
+#gorillaLayer {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.9);
-    color: red;
-    display: flex;
+    pointer-events: none;
+    z-index: 2000;
+    display: none;
     justify-content: center;
     align-items: center;
-    font-size: 60px;
-    font-weight: bold;
-    z-index: 999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s;
-    text-align: center;
     flex-direction: column;
+}
+.gorilla-sprite { font-size: 150px; animation: smash 0.5s infinite; }
+.takedown-text { font-size: 80px; color: red; font-weight: 900; text-shadow: 4px 4px black; }
+.screen-smash { animation: shake 0.1s infinite !important; }
+
+/* ADMIN HUD */
+#adminHUD {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(29, 53, 87, 0.95);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: none;
+    z-index: 3000;
+    font-size: 13px;
+    width: 200px;
+}
+.admin-btn { background: #457b9d; padding: 4px 8px; font-size: 11px; margin: 2px; border: none; color: white; border-radius: 4px; cursor: pointer; width: 100%; display: block;}
+.funny-btn { background: #8338ec !important; font-weight: bold; }
+.gorilla-btn { background: #38b000 !important; font-weight: bold; }
+.freeze-btn { background: #00b4d8 !important; font-weight: bold; }
+
+#adminToggleLink {
+    display: block;
+    margin-top: 20px;
+    font-size: 12px;
+    color: #aaa;
+    cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div class="screen" id="startScreen">
-    <h1>QuickClick</h1>
-    <p id="startText">
-        Click the <b style="color:#ff2a2a">red</b> box.<br>
-        Avoid the <b style="color:#00aaff">blue</b> distractions.<br>
-        Every 50 points = 1 star.
-    </p>
-    <p>High Score: <span id="highScore">0</span></p>
-    <p>Stars: <span id="stars">☆☆☆☆☆</span></p>
-    <button id="startBtn">Start Game</button>
+<div id="gorillaLayer">
+    <div class="gorilla-sprite">🦍</div>
+    <div class="takedown-text">TAKEDOWN</div>
 </div>
 
-<div class="screen" id="levelScreen" style="display:none;">
+<div id="adminHUD">
+    <strong>ADMIN CONSOLE</strong><br><hr>
+    Points: <input type="number" id="injectVal" class="admin-input" style="width:40px" value="50">
+    <button class="admin-btn" onclick="addPoints()">Add Points</button>
+    <div style="display:flex;">
+        <button class="admin-btn" onclick="modifyDecoys(1)">+ Decoy</button>
+        <button class="admin-btn" onclick="modifyDecoys(-1)">- Decoy</button>
+    </div>
+    <hr>
+    <button class="admin-btn" id="godBtn" onclick="toggleGodMode()">God Mode: OFF</button>
+    <button class="admin-btn freeze-btn" id="freezeBtn" onclick="toggleFreeze()">Freeze Time: OFF</button>
+    <button class="admin-btn funny-btn" onclick="toggleDrunkMode()">🥴 INSANE DRUNK</button>
+    <button class="admin-btn gorilla-btn" onclick="summonGorilla()">🦍 GORILLA TAKEDOWN</button>
+</div>
+
+<div class="screen" id="startScreen" style="display: block;">
+    <h1>QuickClick</h1>
+    <p>Click the <b style="color:#ff2a2a">red</b> box.<br>Avoid the <b style="color:#00aaff">blue</b> distractions.<br>Every 50 points = 1 star.</p>
+    <p>High Score: <span id="highScoreText">0</span></p>
+    <div id="starsDisplay">☆☆☆☆☆</div>
+    <button onclick="startGame()">Start Game</button>
+    <a id="adminToggleLink" onclick="unlockAdmin()">Admin Access</a>
+</div>
+
+<div class="screen" id="levelScreen">
     <h2 id="nextLevelTitle">Next Level</h2>
     <p id="levelMessage">Catch your breath!</p>
-    <button id="nextLevelBtn">I'm Ready</button>
+    <button onclick="continueGame()">I'm Ready</button>
 </div>
 
 <div class="screen" id="gameScreen">
     <h2 id="levelTitle">Level 1</h2>
     <div id="gameArea">
+        <div id="heavenlyLight"></div>
+        <div id="halo" class="halo"></div>
         <div id="box" class="target"></div>
     </div>
     <div class="info">
@@ -150,38 +239,28 @@ button:active {
     </div>
 </div>
 
-<div class="screen" id="endGameScreen" style="display:none;">
+<div class="screen" id="endGameScreen">
     <h1>🏆 You Beat QuickClick! 🏆</h1>
-    <p style="font-size:22px;">You collected all 5 stars and conquered the game!</p>
-    <button id="restartGameBtn">Restart QuickClick</button>
+    <p style="font-size:22px; line-height: 1.5;">
+        Congratulations! You have successfully collected all 5 stars and conquered the final boss challenge. 
+        Your reflexes are unmatched!
+    </p>
+    <button onclick="resetEverything()">Restart QuickClick</button>
 </div>
 
-<div id="bossWarning">
+<div id="bossWarning" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); color:red; display:none; justify-content:center; align-items:center; z-index:999; font-size:60px; font-weight:bold; text-align:center; flex-direction:column;">
     BOSS LEVEL<br>
     <span style="font-size:24px;">⚠ FLASHING LIGHTS WARNING ⚠</span>
 </div>
 
 <script>
-// DOM Elements
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const endGameScreen = document.getElementById("endGameScreen");
-const levelScreen = document.getElementById("levelScreen");
-const nextLevelTitle = document.getElementById("nextLevelTitle");
-const nextLevelBtn = document.getElementById("nextLevelBtn");
-const levelMessage = document.getElementById("levelMessage");
-const startBtn = document.getElementById("startBtn");
-const restartBtn = document.getElementById("restartGameBtn");
-const gameArea = document.getElementById("gameArea");
-const box = document.getElementById("box");
-const scoreEl = document.getElementById("score");
-const timeEl = document.getElementById("time");
-const levelTitle = document.getElementById("levelTitle");
-const starsEl = document.getElementById("stars");
-const highScoreEl = document.getElementById("highScore");
-const bossWarning = document.getElementById("bossWarning");
+let level = 0, score = 0, stars = Number(localStorage.getItem("stars")) || 0;
+let cumulative = Number(localStorage.getItem("cumulative")) || 0;
+let highScore = Number(localStorage.getItem("highScore")) || 0;
+let timer, mover, circleInterval, decoys = [];
+let godMode = false, isDrunk = false, isGorillaTime = false, timeFrozen = false;
+let timeLeft = 0;
 
-// Configuration
 const levels = [
     { time: 30, decoys: 3, speed: 1000 },
     { time: 25, decoys: 5, speed: 900 },
@@ -189,190 +268,214 @@ const levels = [
     { time: 15, decoys: 8, speed: 500, boss: true }
 ];
 
-// State Variables
-let level = 0;
-let score = 0;
-let stars = Number(localStorage.getItem("stars")) || 0;
-let cumulative = Number(localStorage.getItem("cumulative")) || 0;
-let highScore = Number(localStorage.getItem("highScore")) || 0;
-let timer, mover, flasher, decoys = [];
+document.getElementById("highScoreText").textContent = highScore;
+updateStarDisplay();
 
-// Initialize
-highScoreEl.textContent = highScore;
-updateStars();
-
-function updateStars(){
-    starsEl.textContent = "⭐".repeat(stars) + "☆".repeat(5 - stars);
-}
-
-function randomPos(el){
-    if(!gameArea) return;
-    el.style.left = Math.random() * (gameArea.clientWidth - 50) + "px";
-    el.style.top = Math.random() * (gameArea.clientHeight - 50) + "px";
-}
-
-function createDecoys(n, boss){
-    decoys.forEach(d => d.remove());
-    decoys = [];
-    for(let i=0; i<n; i++){
-        const d = document.createElement("div");
-        d.className = "target decoy" + (boss ? " boss" : "");
-        d.onclick = (e) => {
-            e.stopPropagation();
-            score = Math.max(0, score - (boss ? 5 : 1));
-            scoreEl.textContent = score;
-            randomPos(d);
-        };
-        gameArea.appendChild(d);
-        randomPos(d);
-        decoys.push(d);
+function unlockAdmin() {
+    if (prompt("Enter Admin Code:") === "6769") {
+        document.getElementById("adminHUD").style.display = "block";
+        document.getElementById("adminToggleLink").style.display = "none";
     }
 }
 
-function startLevel(){
-    const cfg = levels[level];
-    if(cfg.boss){
-        bossWarningScreen(() => begin(cfg));
-    } else {
-        begin(cfg);
+function updateStarDisplay() {
+    document.getElementById("starsDisplay").textContent = "⭐".repeat(stars) + "☆".repeat(5 - stars);
+}
+
+function addPoints() {
+    let val = parseInt(document.getElementById("injectVal").value) || 0;
+    score += val;
+    document.getElementById("score").textContent = score;
+    if (document.getElementById("startScreen").style.display === "block") {
+        cumulative += val;
+        processStars();
     }
 }
 
-function bossWarningScreen(cb){
-    bossWarning.style.opacity = 1;
+function toggleFreeze() {
+    timeFrozen = !timeFrozen;
+    document.getElementById("freezeBtn").textContent = "Freeze Time: " + (timeFrozen ? "ON" : "OFF");
+}
+
+function toggleDrunkMode() {
+    isDrunk = !isDrunk;
+    document.getElementById("gameArea").classList.toggle("drunk-active", isDrunk);
+}
+
+function toggleGodMode() {
+    godMode = !godMode;
+    const btn = document.getElementById("godBtn");
+    const box = document.getElementById("box");
+    const halo = document.getElementById("halo");
+    const light = document.getElementById("heavenlyLight");
+    
+    btn.textContent = "God Mode: " + (godMode ? "ON" : "OFF");
+    box.style.width = godMode ? "100px" : "50px";
+    box.style.height = godMode ? "100px" : "50px";
+    halo.style.display = godMode ? "block" : "none";
+    light.style.display = godMode ? "block" : "none";
+    
+    if(godMode) {
+        halo.style.width = "120px";
+        halo.style.height = "120px";
+        updateHaloPosition();
+    }
+}
+
+function updateHaloPosition() {
+    if(!godMode) return;
+    const box = document.getElementById("box");
+    const halo = document.getElementById("halo");
+    halo.style.left = (parseInt(box.style.left) - 10) + "px";
+    halo.style.top = (parseInt(box.style.top) - 10) + "px";
+}
+
+function summonGorilla() {
+    if (isGorillaTime) return;
+    isGorillaTime = true;
+    const layer = document.getElementById("gorillaLayer");
+    const activeScreen = Array.from(document.querySelectorAll('.screen')).find(s => s.style.display === "block") || document.getElementById("gameScreen");
+    layer.style.display = "flex";
+    activeScreen.classList.add("screen-smash");
     setTimeout(() => {
-        bossWarning.style.opacity = 0;
-        setTimeout(cb, 500);
-    }, 3500);
+        layer.style.display = "none";
+        activeScreen.classList.remove("screen-smash");
+        isGorillaTime = false;
+    }, 3000);
 }
 
-function begin(cfg){
-    // Safety clear to prevent interval stacking
-    clearInterval(timer);
-    clearInterval(mover);
-    clearInterval(flasher);
+function modifyDecoys(n) {
+    if (n > 0) createOneDecoy();
+    else if (decoys.length > 0) decoys.pop().remove();
+}
 
-    levelTitle.textContent = cfg.boss ? "BOSS LEVEL" : "Level " + (level + 1);
-    let time = cfg.time;
-    timeEl.textContent = time;
+function createOneDecoy() {
+    const d = document.createElement("div");
+    d.className = "target decoy" + (levels[level].boss ? " boss" : "");
+    d.onclick = (e) => { 
+        e.stopPropagation(); 
+        if (!godMode) {
+            score = Math.max(0, score - 2); 
+            document.getElementById("score").textContent = score; 
+        }
+        move(d); 
+    };
+    document.getElementById("gameArea").appendChild(d);
+    move(d);
+    decoys.push(d);
+}
 
-    createDecoys(cfg.decoys, cfg.boss);
-    randomPos(box);
+function createBossCircle() {
+    const circle = document.createElement("div");
+    circle.className = "boss-circle";
+    circle.style.left = Math.random() * 470 + "px";
+    circle.style.top = Math.random() * 270 + "px";
+    document.getElementById("gameArea").appendChild(circle);
+    setTimeout(() => circle.remove(), 600);
+}
 
-    if(cfg.boss){
-        flasher = setInterval(() => {
-            const isRed = gameArea.style.background === "red";
-            gameArea.style.background = isRed ? "#fafafa" : "red";
-            box.style.background = isRed ? "#ff2a2a" : "#000";
-        }, 200);
+function move(el) {
+    const size = el.id === "box" && godMode ? 100 : 50;
+    el.style.left = Math.random() * (500 - size) + "px";
+    el.style.top = Math.random() * (300 - size) + "px";
+    if(el.id === "box") updateHaloPosition();
+}
+
+function startGame() {
+    document.getElementById("startScreen").style.display = "none";
+    showLevel();
+}
+
+function showLevel() {
+    const cfg = levels[level];
+    if (cfg.boss) {
+        document.getElementById("bossWarning").style.display = "flex";
+        setTimeout(() => { 
+            document.getElementById("bossWarning").style.display = "none"; 
+            document.getElementById("gameArea").classList.add("boss-bg-flash");
+            circleInterval = setInterval(() => { if(!isGorillaTime) createBossCircle(); }, 300);
+            runLevel(cfg); 
+        }, 3500);
+    } else {
+        document.getElementById("gameArea").classList.remove("boss-bg-flash");
+        runLevel(cfg);
     }
+}
 
-    mover = setInterval(() => {
-        randomPos(box);
-        decoys.forEach(randomPos);
-    }, cfg.speed);
+function runLevel(cfg) {
+    document.getElementById("gameScreen").style.display = "block";
+    document.getElementById("levelTitle").textContent = cfg.boss ? "BOSS LEVEL" : "Level " + (level + 1);
+    timeLeft = cfg.time;
+    document.getElementById("time").textContent = timeLeft;
+    decoys.forEach(d => d.remove()); decoys = [];
+    for(let i=0; i<cfg.decoys; i++) createOneDecoy();
+    move(document.getElementById("box"));
 
+    mover = setInterval(() => { if(!isGorillaTime) { move(document.getElementById("box")); decoys.forEach(move); } }, cfg.speed);
     timer = setInterval(() => {
-        time--;
-        timeEl.textContent = time;
-        if(time <= 0){
-            stopCurrentLevel();
-            nextLevel();
+        if(!isGorillaTime && !timeFrozen) {
+            timeLeft--;
+            document.getElementById("time").textContent = timeLeft;
+            if (timeLeft <= 0) endLevel();
         }
     }, 1000);
 }
 
-function stopCurrentLevel(){
-    clearInterval(timer);
-    clearInterval(mover);
-    clearInterval(flasher);
-    gameArea.style.background = "#fafafa";
-    box.style.background = "#ff2a2a";
-}
-
-function nextLevel(){
+function endLevel() {
+    clearInterval(timer); clearInterval(mover); clearInterval(circleInterval);
+    document.getElementById("gameArea").classList.remove("boss-bg-flash");
+    document.getElementById("gameArea").style.background = "#fafafa";
+    document.querySelectorAll('.boss-circle').forEach(c => c.remove());
     level++;
-    if(level >= levels.length){
-        endGame();
+    if (level >= levels.length) {
+        cumulative += score;
+        processStars();
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("highScore", highScore);
+            document.getElementById("highScoreText").textContent = highScore;
+        }
+        document.getElementById("gameScreen").style.display = "none";
+        document.getElementById(stars >= 5 ? "endGameScreen" : "startScreen").style.display = "block";
+        score = 0; level = 0;
     } else {
-        showLevelInterval();
+        document.getElementById("gameScreen").style.display = "none";
+        document.getElementById("levelScreen").style.display = "block";
+        let msg = (level === 1) ? "Great job! Speeding up..." : (level === 2) ? "Stay focused! It's getting crowded." : "BEWARE: THE BOSS APPROACHES!";
+        document.getElementById("nextLevelTitle").textContent = (levels[level].boss ? "BOSS LEVEL" : "Level " + (level + 1));
+        document.getElementById("levelMessage").textContent = msg;
     }
 }
 
-function showLevelInterval(){
-    gameScreen.style.display = "none";
-    levelScreen.style.display = "block";
-    const isBoss = levels[level].boss;
-    
-    nextLevelTitle.textContent = isBoss ? "BOSS LEVEL" : "Level " + (level + 1);
-
-    let msg = "Get ready!";
-    if(level === 1) msg = "Great job! Speeding up...";
-    else if(level === 2) msg = "Stay focused! It's getting crowded.";
-    else if(level === 3) msg = "BEWARE: THE BOSS APPROACHES!";
-    
-    levelMessage.textContent = msg;
+function continueGame() {
+    document.getElementById("levelScreen").style.display = "none";
+    showLevel();
 }
 
-function endGame(){
-    cumulative += score;
-    while(cumulative >= 50 && stars < 5){
-        cumulative -= 50;
-        stars++;
-    }
-
+function processStars() {
+    while(cumulative >= 50 && stars < 5) { cumulative -= 50; stars++; }
     localStorage.setItem("stars", stars);
     localStorage.setItem("cumulative", cumulative);
-
-    if(score > highScore){
-        highScore = score;
-        localStorage.setItem("highScore", highScore);
-    }
-
-    updateStars();
-    highScoreEl.textContent = highScore;
-    gameScreen.style.display = "none";
-
-    if(stars >= 5){
-        endGameScreen.style.display = "block";
-    } else {
-        startScreen.style.display = "block";
-    }
-
-    score = 0;
-    level = 0;
-    scoreEl.textContent = "0";
+    updateStarDisplay();
 }
 
-// Event Listeners
-box.onclick = (e) => {
-    e.stopPropagation();
-    score++;
-    scoreEl.textContent = score;
-    randomPos(box);
-};
-
-startBtn.onclick = () => {
-    startScreen.style.display = "none";
-    gameScreen.style.display = "block";
-    startLevel();
-};
-
-nextLevelBtn.onclick = () => {
-    levelScreen.style.display = "none";
-    gameScreen.style.display = "block";
-    startLevel();
-};
-
-restartBtn.onclick = () => {
-    stars = 0;
-    cumulative = 0;
+function resetEverything() {
     localStorage.clear();
-    updateStars();
-    endGameScreen.style.display = "none";
-    startScreen.style.display = "block";
+    stars = 0; cumulative = 0; score = 0; level = 0; highScore = 0;
+    timeFrozen = false;
+    document.getElementById("freezeBtn").textContent = "Freeze Time: OFF";
+    document.getElementById("highScoreText").textContent = "0";
+    updateStarDisplay();
+    document.getElementById("endGameScreen").style.display = "none";
+    document.getElementById("startScreen").style.display = "block";
+}
+
+document.getElementById("box").onclick = (e) => { 
+    e.stopPropagation(); 
+    score++; 
+    document.getElementById("score").textContent = score; 
+    move(document.getElementById("box")); 
 };
 </script>
-
 </body>
 </html>
