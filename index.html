@@ -25,11 +25,6 @@ body {
     transition: opacity 0.5s ease;
 }
 
-.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-
 #gameScreen {
     display: none;
     position: relative;
@@ -55,7 +50,6 @@ body {
 }
 
 .decoy {
-    /* Changed from #457b9d to more vibrant blue */
     background: #00aaff;
 }
 
@@ -72,8 +66,8 @@ body {
 }
 
 #box {
-    /* Changed from #e63946 to more vibrant red */
     background: #ff2a2a;
+    z-index: 10;
 }
 
 button {
@@ -84,6 +78,11 @@ button {
     cursor: pointer;
     background: #1d3557;
     color: white;
+    transition: transform 0.1s;
+}
+
+button:active {
+    transform: scale(0.95);
 }
 
 .info {
@@ -142,11 +141,9 @@ button {
 
 <div class="screen" id="gameScreen">
     <h2 id="levelTitle">Level 1</h2>
-
     <div id="gameArea">
         <div id="box" class="target"></div>
     </div>
-
     <div class="info">
         <span>Score: <span id="score">0</span></span>
         <span>Time: <span id="time">30</span></span>
@@ -155,9 +152,7 @@ button {
 
 <div class="screen" id="endGameScreen" style="display:none;">
     <h1>🏆 You Beat QuickClick! 🏆</h1>
-    <p style="font-size:22px;">
-        You collected all 5 stars and conquered the game!
-    </p>
+    <p style="font-size:22px;">You collected all 5 stars and conquered the game!</p>
     <button id="restartGameBtn">Restart QuickClick</button>
 </div>
 
@@ -167,6 +162,7 @@ button {
 </div>
 
 <script>
+// DOM Elements
 const startScreen = document.getElementById("startScreen");
 const gameScreen = document.getElementById("gameScreen");
 const endGameScreen = document.getElementById("endGameScreen");
@@ -174,7 +170,6 @@ const levelScreen = document.getElementById("levelScreen");
 const nextLevelTitle = document.getElementById("nextLevelTitle");
 const nextLevelBtn = document.getElementById("nextLevelBtn");
 const levelMessage = document.getElementById("levelMessage");
-
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartGameBtn");
 const gameArea = document.getElementById("gameArea");
@@ -186,6 +181,7 @@ const starsEl = document.getElementById("stars");
 const highScoreEl = document.getElementById("highScore");
 const bossWarning = document.getElementById("bossWarning");
 
+// Configuration
 const levels = [
     { time: 30, decoys: 3, speed: 1000 },
     { time: 25, decoys: 5, speed: 900 },
@@ -193,6 +189,7 @@ const levels = [
     { time: 15, decoys: 8, speed: 500, boss: true }
 ];
 
+// State Variables
 let level = 0;
 let score = 0;
 let stars = Number(localStorage.getItem("stars")) || 0;
@@ -200,6 +197,7 @@ let cumulative = Number(localStorage.getItem("cumulative")) || 0;
 let highScore = Number(localStorage.getItem("highScore")) || 0;
 let timer, mover, flasher, decoys = [];
 
+// Initialize
 highScoreEl.textContent = highScore;
 updateStars();
 
@@ -208,15 +206,19 @@ function updateStars(){
 }
 
 function randomPos(el){
+    if(!gameArea) return;
     el.style.left = Math.random() * (gameArea.clientWidth - 50) + "px";
     el.style.top = Math.random() * (gameArea.clientHeight - 50) + "px";
 }
 
 function createDecoys(n, boss){
-    for(let i=0;i<n;i++){
+    decoys.forEach(d => d.remove());
+    decoys = [];
+    for(let i=0; i<n; i++){
         const d = document.createElement("div");
         d.className = "target decoy" + (boss ? " boss" : "");
-        d.onclick = () => {
+        d.onclick = (e) => {
+            e.stopPropagation();
             score = Math.max(0, score - (boss ? 5 : 1));
             scoreEl.textContent = score;
             randomPos(d);
@@ -227,58 +229,65 @@ function createDecoys(n, boss){
     }
 }
 
+function startLevel(){
+    const cfg = levels[level];
+    if(cfg.boss){
+        bossWarningScreen(() => begin(cfg));
+    } else {
+        begin(cfg);
+    }
+}
+
 function bossWarningScreen(cb){
     bossWarning.style.opacity = 1;
-    setTimeout(()=>{
+    setTimeout(() => {
         bossWarning.style.opacity = 0;
         setTimeout(cb, 500);
     }, 3500);
 }
 
-function startLevel(){
-    const cfg = levels[level];
-    if(cfg.boss){
-        bossWarningScreen(()=>begin(cfg));
-    } else begin(cfg);
-}
-
 function begin(cfg){
+    // Safety clear to prevent interval stacking
+    clearInterval(timer);
+    clearInterval(mover);
+    clearInterval(flasher);
+
     levelTitle.textContent = cfg.boss ? "BOSS LEVEL" : "Level " + (level + 1);
     let time = cfg.time;
     timeEl.textContent = time;
 
-    decoys.forEach(d=>d.remove());
-    decoys = [];
     createDecoys(cfg.decoys, cfg.boss);
     randomPos(box);
 
     if(cfg.boss){
-        flasher = setInterval(()=>{
-            const red = gameArea.style.background === "red";
-            gameArea.style.background = red ? "#fafafa" : "red";
-            // Updated vibrant red here
-            box.style.background = red ? "#ff2a2a" : "#000";
-        },200);
+        flasher = setInterval(() => {
+            const isRed = gameArea.style.background === "red";
+            gameArea.style.background = isRed ? "#fafafa" : "red";
+            box.style.background = isRed ? "#ff2a2a" : "#000";
+        }, 200);
     }
 
-    mover = setInterval(()=>{
+    mover = setInterval(() => {
         randomPos(box);
         decoys.forEach(randomPos);
     }, cfg.speed);
 
-    timer = setInterval(()=>{
+    timer = setInterval(() => {
         time--;
         timeEl.textContent = time;
-        if(time<=0){
-            clearInterval(timer);
-            clearInterval(mover);
-            clearInterval(flasher);
-            gameArea.style.background="#fafafa";
-            // Updated vibrant red here
-            box.style.background="#ff2a2a";
+        if(time <= 0){
+            stopCurrentLevel();
             nextLevel();
         }
-    },1000);
+    }, 1000);
+}
+
+function stopCurrentLevel(){
+    clearInterval(timer);
+    clearInterval(mover);
+    clearInterval(flasher);
+    gameArea.style.background = "#fafafa";
+    box.style.background = "#ff2a2a";
 }
 
 function nextLevel(){
@@ -322,34 +331,36 @@ function endGame(){
 
     updateStars();
     highScoreEl.textContent = highScore;
-
-    gameScreen.style.display="none";
+    gameScreen.style.display = "none";
 
     if(stars >= 5){
-        endGameScreen.style.display="block";
+        endGameScreen.style.display = "block";
     } else {
-        startScreen.style.display="block";
+        startScreen.style.display = "block";
     }
 
     score = 0;
     level = 0;
+    scoreEl.textContent = "0";
 }
 
-box.onclick = () => {
+// Event Listeners
+box.onclick = (e) => {
+    e.stopPropagation();
     score++;
     scoreEl.textContent = score;
     randomPos(box);
 };
 
 startBtn.onclick = () => {
-    startScreen.style.display="none";
-    gameScreen.style.display="block";
+    startScreen.style.display = "none";
+    gameScreen.style.display = "block";
     startLevel();
 };
 
 nextLevelBtn.onclick = () => {
-    levelScreen.style.display="none";
-    gameScreen.style.display="block";
+    levelScreen.style.display = "none";
+    gameScreen.style.display = "block";
     startLevel();
 };
 
@@ -358,10 +369,10 @@ restartBtn.onclick = () => {
     cumulative = 0;
     localStorage.clear();
     updateStars();
-    endGameScreen.style.display="none"; 
-    startScreen.style.display="block";
+    endGameScreen.style.display = "none";
+    startScreen.style.display = "block";
 };
 </script>
 
 </body>
-</html> 
+</html>
